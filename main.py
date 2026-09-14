@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from numpy.typing import NDArray
+from itertools import chain, zip_longest
 
 
 def save_matrix(matrix: NDArray[np.int64], filename: str) -> None:
@@ -13,11 +14,30 @@ def concentration(matrix: NDArray[np.int64]) -> np.float64:
 
 
 def random_occupation(matrix: NDArray[np.int64], p: np.float64) -> None:
-  while concentration(matrix) < p:
-    free_flat = np.flatnonzero(matrix == 0)
-    if free_flat.size == 0:
-      break
-    matrix.flat[np.random.choice(free_flat)] = 1
+  height, width = matrix.shape
+  while concentration(matrix) <= p:
+    x, y = np.random.randint(height), np.random.randint(width)
+    matrix[x, y] = 1
+
+
+def random_bond_occupation(matrix: NDArray[np.int64], p: np.float64) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+  H, W = matrix.shape
+  
+  h_possible = (matrix[:, :-1] == 1) & (matrix[:, 1:] == 1)
+  w_possible = (matrix[:-1, :] == 1) & (matrix[1:, :] == 1)
+
+  n_h = H * (W - 1)
+  n_w = (H - 1) * W 
+
+  possible = np.concatenate([np.flatnonzero(h_possible), n_h + np.flatnonzero(w_possible)])
+
+  bonds = np.zeros(n_h + n_w, dtype=np.int64)
+
+  while np.count_nonzero(bonds[possible]) / possible.size <= p:
+    bond_idx = possible[np.random.randint(len(possible))]
+    bonds[bond_idx] = 1
+
+  return bonds[:n_h].reshape(H, W - 1), bonds[n_h:].reshape(H - 1, W)
 
 
 def scott_bins(matrix: NDArray[np.int64]) -> int:
@@ -43,6 +63,22 @@ def pearson_test(matrix: NDArray[np.int64], n_bins: int, expected_prob: np.float
   return np.sum((observed - expected) ** 2 / expected), n_intervals * n_intervals - 1
 
 
+def format_bonds_lattice(matrix: NDArray[np.int64], h_bonds: NDArray[np.int64],w_bonds: NDArray[np.int64]) -> str:
+    H, W = matrix.shape
+
+    def node_row(i):
+        nodes = "".join("●" if matrix[i, j] else "○" for j in range(W))
+        links = "".join("─" if h_bonds[i, j] else " " for j in range(W - 1))
+        return "".join(a + b for a, b in zip_longest(nodes, links, fillvalue="")).rstrip()
+
+    def link_row(i):
+        return "".join("│ " if w_bonds[i, j] else "  " for j in range(W)).rstrip()
+
+    lines = chain.from_iterable([node_row(i)] + ([link_row(i)] if i < H - 1 else []) for i in range(H))
+
+    return "\n".join(lines)
+
+
 class Solution:
 
   @classmethod
@@ -65,6 +101,23 @@ class Solution:
       print()
 
   @classmethod
+  def solve_task_3(cls, L: int, p_bond: float) -> None:
+    matrix = np.ones((L, L), dtype=np.int64)
+
+    hbonds, vbonds = random_bond_occupation(matrix, p_bond)
+
+    print(format_bonds_lattice(matrix, hbonds, vbonds))
+
+  @classmethod
+  def solve_task_4(cls, L: int, p_site: float, p_bond: float) -> None:
+    matrix = np.zeros((L, L), dtype=np.int64)
+
+    random_occupation(matrix, p_site)
+    hbonds, vbonds = random_bond_occupation(matrix, p_bond)
+
+    print(format_bonds_lattice(matrix, hbonds, vbonds))
+
+  @classmethod
   def __run_experiment(cls, L: int, p: float) -> tuple[np.float64, int, int]:
     shape = (L, L)
     matrix = np.zeros(shape, dtype=int)
@@ -78,7 +131,9 @@ class Solution:
 
 
 if __name__ == '__main__':
-  np.random.seed(42)
+  np.random.seed()
 
-  Solution.solve_task_1(10, 0.2)
-  Solution.solve_task_2(100)
+  #Solution.solve_task_1(10, 0.2)
+  #Solution.solve_task_2(100)
+  #Solution.solve_task_3(10, p_bond=0.2)
+  Solution.solve_task_4(10, p_site=0.9, p_bond=0.3)
