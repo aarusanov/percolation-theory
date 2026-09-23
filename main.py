@@ -15,30 +15,16 @@ def concentration(matrix: NDArray[np.int64]) -> np.float64:
 
 
 def random_occupation(matrix: NDArray[np.int64], p: np.float64) -> None:
-  height, width = matrix.shape
-  while concentration(matrix) <= p:
-    x, y = np.random.randint(height), np.random.randint(width)
-    matrix[x, y] = 1
+  matrix[:] = np.random.random(matrix.shape) < p
 
 
 def random_bond_occupation(matrix: NDArray[np.int64], p: np.float64) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
-  H, W = matrix.shape
-  
-  h_possible = (matrix[:, :-1] == 1) & (matrix[:, 1:] == 1)
-  w_possible = (matrix[:-1, :] == 1) & (matrix[1:, :] == 1)
+  h_mask = (matrix[:, :-1] == 1) & (matrix[:, 1:] == 1)
+  w_mask = (matrix[:-1, :] == 1) & (matrix[1:, :] == 1)
 
-  n_h = H * (W - 1)
-  n_w = (H - 1) * W 
-
-  possible = np.concatenate([np.flatnonzero(h_possible), n_h + np.flatnonzero(w_possible)])
-
-  bonds = np.zeros(n_h + n_w, dtype=np.int64)
-
-  while np.count_nonzero(bonds[possible]) / possible.size <= p:
-    bond_idx = possible[np.random.randint(len(possible))]
-    bonds[bond_idx] = 1
-
-  return bonds[:n_h].reshape(H, W - 1), bonds[n_h:].reshape(H - 1, W)
+  hbonds = (h_mask & (np.random.random(h_mask.shape) < p)).astype(np.int64)
+  vbonds = (w_mask & (np.random.random(w_mask.shape) < p)).astype(np.int64)
+  return hbonds, vbonds
 
 
 def circle_area(radius: np.float64) -> np.float64:
@@ -114,20 +100,22 @@ def print_circles(centers: NDArray[np.float64], radius: np.float64, shape: tuple
   canvas = tk.Canvas(root, width=width*scale, height=height*scale, bg="white")
   canvas.pack()
 
-  visible = (
-    (px, py)
-    for x, y in centers
-    for dx in (-width, 0, width)
-    for dy in (-height, 0, height)
-    for px, py in [(x + dx, y + dy)]
-    if -radius <= px <= width + radius and -radius <= py <= height + radius
-  )
+  def visible_images(x, y):
+    return (
+      (px, py)
+      for dx in (-width, 0, width)
+      for dy in (-height, 0, height)
+      for px, py in [(x + dx, y + dy)]
+      if -radius <= px <= width + radius and -radius <= py <= height + radius
+    )
 
-  r = radius * scale
-
-  for px, py in visible:
+  def oval_box(px, py):
     cx, cy = px * scale, (height - py) * scale
-    canvas.create_oval(cx-r, cy-r, cx+r, cy+r, outline="blue", width=1)
+    r = radius * scale
+    return cx-r, cy-r, cx+r, cy+r
+
+  for px, py in chain.from_iterable(visible_images(x, y) for x, y in centers):
+    canvas.create_oval(*oval_box(px, py), outline="blue", width=1)
 
   root.mainloop()
 
@@ -144,12 +132,17 @@ class Solution:
   @classmethod
   def solve_task_2(cls, L: int) -> None:
     for p in np.arange(0.2, 1.0, 0.1):
+      chi2, dof, mean, _ = cls.__run_experiment(L, p)
+
       data = [cls.__run_experiment(L, p) for _ in range(100)]
 
       df = pd.DataFrame(data, columns=['chi2', 'df', 'concentration', 'bins'])
 
+      mean_df = df[['chi2', 'df', 'concentration']].mean()
+
       print(f"p = {p:.1f}")
-      print(df[['chi2', 'df', 'concentration']].mean().round(4))
+      print(f"1:   chi2 = {chi2:.4f} df = {dof} concentration = {mean:.4f}")
+      print(f"100: chi2 = {mean_df['chi2']:.4f} df = {mean_df['df']:.0f} concentration = {mean_df['concentration']:.4f}")
       print(df['concentration'].head().values)
       print()
 
@@ -192,10 +185,10 @@ class Solution:
 
 
 if __name__ == '__main__':
-  np.random.seed()
+  np.random.seed(42)
 
   #Solution.solve_task_1(10, 0.2)
-  #Solution.solve_task_2(100)
+  #Solution.solve_task_2(1000)
   #Solution.solve_task_3(10, p_bond=0.2)
-  #Solution.solve_task_4(10, p_site=0.9, p_bond=0.3)
-  Solution.solve_task_5(100, 4, 0.4)
+  #Solution.solve_task_4(10, p_site=0.5, p_bond=0.3)
+  Solution.solve_task_5(100, r=2, p=0.4)
