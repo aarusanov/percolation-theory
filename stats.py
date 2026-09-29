@@ -60,10 +60,7 @@ def find_label_clusters(matrix: NDArray[np.int64]) -> NDArray[np.int64]:
 
 
 def find_percolating_cluster(labels: NDArray[np.int64]) -> tuple[int, int, int]:
-  spanning = np.union1d(
-    np.intersect1d(labels[0], labels[-1]),
-    np.intersect1d(labels[:, 0], labels[:, -1]),
-  )
+  spanning = np.intersect1d(labels[:, 0], labels[:, -1])
   spanning = spanning[spanning > 0]
 
   if not spanning.size:
