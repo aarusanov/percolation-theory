@@ -65,7 +65,15 @@ class Solution:
 
     labels = find_label_clusters(matrix)
 
+    sizes = np.bincount(labels.ravel())[1:]
+    values, counts = np.unique(sizes, return_counts=True)
+
     save_matrix(labels, f'out/clusters_p{p}.txt')
+    np.savetxt(f'out/cluster_sizes_p{p}.txt', np.column_stack([values, counts]), fmt='%d')
+
+    print(labels)
+    print('size count')
+    print(np.column_stack([values, counts]))
 
   @classmethod
   def solve_task_7(cls, L: int, p: float) -> None:
@@ -93,8 +101,8 @@ if __name__ == '__main__':
   #Solution.solve_task_1(10, 0.2)
   #Solution.solve_task_2(1000)
 
-  #Solution.solve_task_3(10, p_bond=0.2)
-  #Solution.solve_task_4(10, p_site=0.5, p_bond=0.3)
+  #Solution.solve_task_3(10, p_bond=0.5)
+  #Solution.solve_task_4(10, p_site=0.6, p_bond=0.5)
   #Solution.solve_task_5(100, r=2, p=0.4)
 
   #Solution.solve_task_6(10, 0.5)
