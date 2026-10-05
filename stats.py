@@ -30,6 +30,10 @@ def pearson_test(matrix: NDArray[np.int64], n_bins: int, expected_prob: np.float
   return np.sum((observed - expected) ** 2 / expected), n_intervals * n_intervals - 1
 
 
+def mean_cluster_size(sizes: NDArray[np.int64]) -> np.float64:
+  return np.sum(sizes ** 2) / np.sum(sizes) if sizes.size else np.float64('nan')
+
+
 def find_label_clusters(matrix: NDArray[np.int64]) -> NDArray[np.int64]:
   labels = np.zeros(matrix.shape, dtype=np.int64)
   parent = [0]

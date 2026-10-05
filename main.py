@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
-from stats import concentration, find_label_clusters, find_percolating_cluster, pearson_test, scott_bins, sigmoid
+from stats import concentration, find_label_clusters, find_percolating_cluster, mean_cluster_size, pearson_test, scott_bins, sigmoid
 from gen import random_bond_occupation, random_occupation, random_occupation_continuum
 from render import print_bonds_lattice, print_circles
 from utils import save_matrix
@@ -125,16 +125,16 @@ class Solution4:
 
     p = df.index.to_numpy()
 
-    res = pd.Series(name='pc', dtype=float)
-    for name, P in df.items():
-      (pc, a), _ = curve_fit(sigmoid, p, P, maxfev=10**6)
-      print(f'{name}: pc = {pc:.4f}')
-      ax.plot(xs, sigmoid(xs, pc, a), color=f'C{df.columns.get_loc(name)}')
+    fits = [curve_fit(sigmoid, p, P, maxfev=10**6)[0] for _, P in df.items()]
+    res = pd.Series([pc for pc, _ in fits], index=df.columns.astype(int), name='pc', dtype=float)
 
-      res[int(name)] = pc
+    for i, (pc, a) in enumerate(fits):
+        ax.plot(xs, sigmoid(xs, pc, a), color=f'C{i}')
+
+    print(res.to_string())
 
     res = res.to_frame()
-    res['x'] = res.index ** -0.75
+    res['x'] = res.index ** - (3 / 4)
 
     k, b = np.polyfit(res['x'], res['pc'], 1)
 
@@ -147,6 +147,36 @@ class Solution4:
     matrix = random_occupation((L, L), p)
     labels = find_label_clusters(matrix)
     return p, find_percolating_cluster(labels)[0]
+
+
+class Solution5:
+
+  @classmethod
+  def solve_task_1(cls, L: int, p: float, step: float, k: int = 100) -> pd.DataFrame:
+    trials = (cls.__run_experiment(L, p) for p in tqdm(np.arange(p, 1.0, step), desc=f'L={L}') for _ in range(k))
+    df = pd.DataFrame(trials, columns=['p', 'S', 'Pinf']).groupby('p').mean()
+    df.to_csv('out/task5.csv', sep='\t', float_format='%.4f')
+
+  @classmethod
+  def solve_task_2(cls) -> None:
+    df = pd.read_csv('out/task5.csv', sep='\t')
+
+    df.plot(x='p', y='S', ylabel='S', legend=True, ylim=(0, df['S'].quantile(.95)))
+    df[df['Pinf'] > 0].plot(x='p', y='Pinf', ylabel='P∞', legend=True, xlim=(0, None))
+    plt.show()
+
+  @classmethod
+  def __run_experiment(cls, L: int, p: float) -> tuple[np.float64, np.float64, np.float64]:
+    matrix = random_occupation((L, L), p)
+    labels = find_label_clusters(matrix)
+
+    sizes = np.bincount(labels.ravel())[1:]
+    found, label, size = find_percolating_cluster(labels)
+
+    if found:
+      sizes = np.delete(sizes, label - 1)
+
+    return p, mean_cluster_size(sizes), size / matrix.size
 
 
 if __name__ == '__main__':
@@ -163,4 +193,7 @@ if __name__ == '__main__':
   #Solution3.solve_task_2(10, 0.5)
 
   #Solution4.solve_task_2((100, 200, 500), p=0.2, step=.02)
-  Solution4.solve_task_3()
+  #Solution4.solve_task_3()
+
+  Solution5.solve_task_1(100, p=0.2, step=.02)
+  Solution5.solve_task_2()
