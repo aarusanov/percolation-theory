@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 
+from tqdm import tqdm
 from numpy.typing import NDArray
 
-from gen import random_bond_occupation, random_occupation, random_occupation_continuum
 from stats import concentration, find_label_clusters, find_percolating_cluster, pearson_test, scott_bins
+from gen import random_bond_occupation, random_occupation, random_occupation_continuum
 from render import print_bonds_lattice, print_circles
 from utils import save_matrix
 
@@ -101,6 +102,26 @@ class Solution3:
     print(f'percolation = {found} label = {label} size = {size}')
 
 
+class Solution4:
+
+  @classmethod
+  def solve_task_1(cls, L: int, p: float, step: float, k: int = 100) -> pd.DataFrame:
+    trials = (cls.__run_experiment(L, p) for p in tqdm(np.arange(p, 1.0, step), desc=f'L={L}') for _ in range(k))
+    return pd.DataFrame(trials, columns=['p', 'P(p)']).groupby('p').mean()
+
+  @classmethod
+  def solve_task_2(cls, sizes: tuple[int, ...], p: float, step: float, k: int = 100) -> None:
+    tables = [cls.solve_task_1(L, p, step, k).add_suffix(f'_L{L}') for L in sizes]
+    pd.concat(tables, axis=1).to_csv('out/results.csv', sep='\t', float_format='%.4f')
+
+
+  @classmethod
+  def __run_experiment(cls, L: int, p: float) -> tuple[np.float64, int]:
+    matrix = random_occupation((L, L), p)
+    labels = find_label_clusters(matrix)
+    return p, find_percolating_cluster(labels)[0]
+
+
 if __name__ == '__main__':
   np.random.seed(42)
 
@@ -113,3 +134,6 @@ if __name__ == '__main__':
 
   #Solution3.solve_task_1(10, 0.5)
   #Solution3.solve_task_2(10, 0.5)
+
+  #Solution4.solve_task_2((100, 200, 500), p=0.2, step=.02)
+  df = pd.read_csv('out/results.csv', sep='\t', index_col='p')
