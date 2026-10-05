@@ -9,7 +9,7 @@ from render import print_bonds_lattice, print_circles
 from utils import save_matrix
 
 
-class Solution:
+class Solution1:
 
   @classmethod
   def solve_task_1(cls, L: int, p: float) -> None:
@@ -36,7 +36,19 @@ class Solution:
       print()
 
   @classmethod
-  def solve_task_3(cls, L: int, p_bond: float) -> None:
+  def __run_experiment(cls, L: int, p: float) -> tuple[np.float64, int, np.float64, NDArray[np.int64]]:
+    matrix = random_occupation((L, L), p)
+
+    n_bins = scott_bins(matrix)
+    mean = concentration(matrix)
+
+    return *pearson_test(matrix, n_bins, p), mean, matrix
+
+
+class Solution2:
+
+  @classmethod
+  def solve_task_1(cls, L: int, p_bond: float) -> None:
     matrix = np.ones((L, L), dtype=np.int64)
 
     hbonds, vbonds = random_bond_occupation(matrix, p_bond)
@@ -44,7 +56,7 @@ class Solution:
     print_bonds_lattice(matrix, hbonds, vbonds)
 
   @classmethod
-  def solve_task_4(cls, L: int, p_site: float, p_bond: float) -> None:
+  def solve_task_2(cls, L: int, p_site: float, p_bond: float) -> None:
     matrix = random_occupation((L, L), p_site)
 
     hbonds, vbonds = random_bond_occupation(matrix, p_bond)
@@ -52,15 +64,18 @@ class Solution:
     print_bonds_lattice(matrix, hbonds, vbonds)
 
   @classmethod
-  def solve_task_5(cls, L: int, r: float, p: float) -> None:
+  def solve_task_3(cls, L: int, r: float, p: float) -> None:
     shape = (L, L)
 
     centers = random_occupation_continuum(shape, r, p)
 
     print_circles(centers, r, shape, scale=8)
 
+
+class Solution3:
+
   @classmethod
-  def solve_task_6(cls, L: int, p: float) -> None:
+  def solve_task_1(cls, L: int, p: float) -> None:
     matrix = random_occupation((L, L), p)
 
     labels = find_label_clusters(matrix)
@@ -76,7 +91,7 @@ class Solution:
     print(np.column_stack([values, counts]))
 
   @classmethod
-  def solve_task_7(cls, L: int, p: float) -> None:
+  def solve_task_2(cls, L: int, p: float) -> None:
     matrix = random_occupation((L, L), p)
 
     labels = find_label_clusters(matrix)
@@ -85,25 +100,16 @@ class Solution:
     print(labels)
     print(f'percolation = {found} label = {label} size = {size}')
 
-  @classmethod
-  def __run_experiment(cls, L: int, p: float) -> tuple[np.float64, int, np.float64, NDArray[np.int64]]:
-    matrix = random_occupation((L, L), p)
-
-    n_bins = scott_bins(matrix)
-    mean = concentration(matrix)
-
-    return *pearson_test(matrix, n_bins, p), mean, matrix
-
 
 if __name__ == '__main__':
   np.random.seed(42)
 
-  #Solution.solve_task_1(10, 0.2)
-  #Solution.solve_task_2(1000)
+  #Solution1.solve_task_1(10, 0.2)
+  #Solution1.solve_task_2(1000)
 
-  #Solution.solve_task_3(10, p_bond=0.5)
-  #Solution.solve_task_4(10, p_site=0.6, p_bond=0.5)
-  #Solution.solve_task_5(100, r=2, p=0.4)
+  #Solution2.solve_task_1(10, p_bond=0.5)
+  #Solution2.solve_task_2(10, p_site=0.6, p_bond=0.5)
+  #Solution2.solve_task_3(100, r=2, p=0.4)
 
-  #Solution.solve_task_6(10, 0.5)
-  Solution.solve_task_7(10, 0.5)
+  #Solution3.solve_task_1(10, 0.5)
+  #Solution3.solve_task_2(10, 0.5)
