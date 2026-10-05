@@ -70,3 +70,7 @@ def find_percolating_cluster(labels: NDArray[np.int64]) -> tuple[int, int, int]:
   label = int(spanning[np.argmax(sizes[spanning])])
 
   return 1, label, int(sizes[label])
+
+
+def sigmoid(p: NDArray[np.float64], pc: float, a: float) -> NDArray[np.float64]:
+  return (1 + np.exp(-(p - pc) * a)) ** -1

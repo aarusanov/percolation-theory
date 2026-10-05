@@ -3,8 +3,10 @@ import pandas as pd
 
 from tqdm import tqdm
 from numpy.typing import NDArray
+from matplotlib import pyplot as plt
+from scipy.optimize import curve_fit
 
-from stats import concentration, find_label_clusters, find_percolating_cluster, pearson_test, scott_bins
+from stats import concentration, find_label_clusters, find_percolating_cluster, pearson_test, scott_bins, sigmoid
 from gen import random_bond_occupation, random_occupation, random_occupation_continuum
 from render import print_bonds_lattice, print_circles
 from utils import save_matrix
@@ -111,9 +113,34 @@ class Solution4:
 
   @classmethod
   def solve_task_2(cls, sizes: tuple[int, ...], p: float, step: float, k: int = 100) -> None:
-    tables = [cls.solve_task_1(L, p, step, k).add_suffix(f'_L{L}') for L in sizes]
+    tables = [cls.solve_task_1(L, p, step, k)['P(p)'].rename(L) for L in sizes]
     pd.concat(tables, axis=1).to_csv('out/results.csv', sep='\t', float_format='%.4f')
 
+  @classmethod
+  def solve_task_3(cls) -> None:
+    df = pd.read_csv('out/results.csv', sep='\t', index_col='p')
+
+    ax = df.plot(marker='o', linestyle='none', xlabel='p', ylabel='P(p)', xlim=(0.525, 0.675))
+    xs = np.linspace(df.index.min(), df.index.max(), 300)
+
+    p = df.index.to_numpy()
+
+    res = pd.Series(name='pc', dtype=float)
+    for name, P in df.items():
+      (pc, a), _ = curve_fit(sigmoid, p, P, maxfev=10**6)
+      print(f'{name}: pc = {pc:.4f}')
+      ax.plot(xs, sigmoid(xs, pc, a), color=f'C{df.columns.get_loc(name)}')
+
+      res[int(name)] = pc
+
+    res = res.to_frame()
+    res['x'] = res.index ** -0.75
+
+    k, b = np.polyfit(res['x'], res['pc'], 1)
+
+    res.plot(x='x', y='pc', style='o', legend=False)
+    plt.plot(res['x'], k * res['x'] + b)
+    plt.show()
 
   @classmethod
   def __run_experiment(cls, L: int, p: float) -> tuple[np.float64, int]:
@@ -136,4 +163,4 @@ if __name__ == '__main__':
   #Solution3.solve_task_2(10, 0.5)
 
   #Solution4.solve_task_2((100, 200, 500), p=0.2, step=.02)
-  df = pd.read_csv('out/results.csv', sep='\t', index_col='p')
+  Solution4.solve_task_3()
